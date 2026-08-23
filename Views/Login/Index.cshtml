@@ -1,0 +1,15 @@
+@model LoginViewModel
+@{ ViewData["Title"] = "Вход"; }
+
+<div class="auth-wrap auth-login-page">
+    <section class="auth-card glass-login">
+        <div class="login-mark">AP</div>
+        @if (!string.IsNullOrWhiteSpace(Model.Error)) { <div class="alert error">@Model.Error</div> }
+        <form method="post" class="form-stack">
+            <input type="hidden" name="returnUrl" value="@ViewBag.ReturnUrl" />
+            <input asp-for="Password" autofocus autocomplete="current-password" placeholder="Пароль" aria-label="Пароль" />
+            <span asp-validation-for="Password" class="field-error"></span>
+            <button class="btn primary" type="submit">Войти</button>
+        </form>
+    </section>
+</div>

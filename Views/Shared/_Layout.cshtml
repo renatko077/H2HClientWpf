@@ -1,0 +1,99 @@
+﻿<!DOCTYPE html>
+@using H2HClientWeb.Data
+@using H2HClientWeb.Services
+@inject AppRepository Repository
+@{
+    var currentProd = Context.Session.GetString("Environment:IsProd") == "true";
+    var platformKey = currentProd ? "Platform:Prod" : "Platform:Dev";
+    var platformSession = Context.Session.GetJson<PlatformSession>(platformKey);
+    var savedPlatforms = Repository.GetPlatformCredentials(currentProd);
+    var platformError = ViewBag.PlatformError as string;
+    var platformInitial = string.IsNullOrWhiteSpace(platformSession?.Login)
+        ? "?"
+        : platformSession.Login[..1].ToUpperInvariant();
+}
+<html lang="ru">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] — H2H Client Web</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+    <header class="topbar">
+        <div class="shell topbar-inner">
+            <a class="brand" asp-controller="Merchants" asp-action="Index" asp-route-prod="@currentProd">
+                <span class="brand-mark">AP</span>
+                <span class="brand-copy"><strong>ApexPay</strong><small>H2H Console</small></span>
+            </a>
+                <nav class="topnav header-controls">
+                    <div class="mode-switch header-mode">
+                        <a class="@(!currentProd ? "active" : "")" asp-controller="Merchants" asp-action="Index" asp-route-prod="false"><span class="status-dot"></span>DEV</a>
+                        <a class="@(currentProd ? "active prod" : "")" asp-controller="Merchants" asp-action="Index" asp-route-prod="true"><span class="status-dot"></span>PROD</a>
+                    </div>
+                    @if (platformSession is not null)
+                    {
+                        <details class="account-menu header-menu">
+                            <summary><span class="account-avatar">@platformInitial</span><span class="account-copy"><strong>@platformSession.Login</strong><small>@platformSession.Role · @(currentProd ? "Production" : "Development")</small></span><span class="chevron">⌄</span></summary>
+                            <div class="header-menu-panel">
+                                <div class="menu-caption">Аккаунт платформы</div>
+                                <form asp-controller="Merchants" asp-action="PlatformLogout" method="post">
+                                    <input type="hidden" name="isProd" value="@(currentProd ? "true" : "false")" />
+                                    <button class="menu-action" type="submit">Выйти из платформы</button>
+                                </form>
+                                <form asp-controller="Login" asp-action="Logout" method="post">
+                                    <button class="menu-action danger-text" type="submit">Закрыть H2H-панель</button>
+                                </form>
+                            </div>
+                        </details>
+                    }
+                    else
+                    {
+                        <details class="header-login header-menu" data-login-error="@(!string.IsNullOrWhiteSpace(platformError) ? "true" : "false")">
+                            <summary><span class="account-avatar ghost-avatar">+</span><span class="account-copy"><strong>Подключить платформу</strong><small>Оператор или администратор</small></span><span class="chevron">⌄</span></summary>
+                            <button type="button" class="modal-backdrop" data-close-details aria-label="Закрыть"></button>
+                            <form asp-controller="Merchants" asp-action="HeaderPlatformLogin" method="post" class="header-login-form">
+                                <input type="hidden" name="IsProd" value="@(currentProd ? "true" : "false")" />
+                                <div class="modal-login-head"><strong>Вход</strong><span>@(currentProd ? "PROD" : "DEV")</span></div>
+                                @if (!string.IsNullOrWhiteSpace(platformError))
+                                {
+                                    <div class="modal-error">@platformError</div>
+                                }
+                                @if (savedPlatforms.Count > 0)
+                                {
+                                    <div class="saved-accounts">
+                                        @foreach (var account in savedPlatforms)
+                                        {
+                                            <button type="button" data-account-login="@account.Login"><span>@account.Login[..1].ToUpperInvariant()</span>@account.Login</button>
+                                        }
+                                    </div>
+                                }
+                                <input name="Login" value="@savedPlatforms.FirstOrDefault()?.Login" placeholder="Логин" autocomplete="username" required />
+                                <input name="Password" type="password" placeholder="Пароль" autocomplete="current-password" />
+                                <input name="Remember" type="hidden" value="true" />
+                                <button class="btn primary" type="submit">Войти</button>
+                            </form>
+                        </details>
+                        <form asp-controller="Login" asp-action="Logout" method="post">
+                            <button class="panel-exit" type="submit" title="Закрыть H2H-панель" aria-label="Закрыть H2H-панель">↗</button>
+                        </form>
+                    }
+                </nav>
+        </div>
+    </header>
+    }
+    <div class="shell page-shell @(User.Identity?.IsAuthenticated == true ? "" : "login-shell")">
+        <main role="main">
+            @RenderBody()
+        </main>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

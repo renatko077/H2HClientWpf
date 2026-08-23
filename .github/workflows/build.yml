@@ -1,0 +1,31 @@
+name: Build ASP.NET site
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore H2HClientWpf.csproj
+
+      - name: Publish
+        run: dotnet publish H2HClientWpf.csproj -c Release -o publish --no-restore
+
+      - name: Upload server artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: H2HClientWpf-server
+          path: publish/
+          if-no-files-found: error

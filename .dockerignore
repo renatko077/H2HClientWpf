@@ -1,0 +1,7 @@
+bin/
+obj/
+.vs/
+.git/
+App_Data/
+*.user
+*.suo

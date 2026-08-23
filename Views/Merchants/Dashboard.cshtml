@@ -1,0 +1,161 @@
+@model DashboardViewModel
+@{
+    ViewData["Title"] = Model.Merchant.Name;
+    var generatedOrderId = $"H2H-{DateTimeOffset.UtcNow:yyyyMMddHHmmss}";
+    var generatedDebitId = $"DEBIT-{DateTimeOffset.UtcNow:yyyyMMddHHmmss}";
+    var latestSessionId = Model.Result?.SessionId
+        ?? Model.History.FirstOrDefault(item => !string.IsNullOrWhiteSpace(item.SessionId))?.SessionId
+        ?? "";
+}
+
+<div class="dashboard-head">
+    <div>
+        <a class="back-link" asp-action="Index" asp-route-prod="@Model.Merchant.IsProd">← Мерчанты</a>
+        <h1>@Model.Merchant.Name</h1>
+        <div class="muted mono small">@(Model.IsProd ? "Production API" : Model.Merchant.BaseUrl)</div>
+    </div>
+    <span class="badge">@(Model.IsProd ? "PROD" : "DEV")</span>
+</div>
+
+@if (Model.Result is not null)
+{
+    <section class="card result-card @(Model.Result.Success ? "success" : "error")">
+        <div class="result-heading">
+            <h2>@(Model.Result.Success ? "Запрос выполнен" : "Ошибка запроса")</h2>
+            @if (Model.Result.DurationMs > 0) { <span class="badge">@((Model.Result.DurationMs / 1000d).ToString("0.000")) сек</span> }
+        </div>
+        @if (!string.IsNullOrWhiteSpace(Model.Result.Error)) { <p>@Model.Result.Error</p> }
+        @if (!string.IsNullOrWhiteSpace(Model.Result.SessionId)) { <p><strong>Session ID:</strong> <code>@Model.Result.SessionId</code></p> }
+        @if (!string.IsNullOrWhiteSpace(Model.Result.RequestJson)) { <details><summary>Тело запроса</summary><pre>@Model.Result.RequestJson</pre></details> }
+        @if (!string.IsNullOrWhiteSpace(Model.Result.ResponseJson)) { <details open><summary>Ответ сервера</summary><pre>@Model.Result.ResponseJson</pre></details> }
+    </section>
+}
+
+<div class="tabs" role="tablist">
+    <button class="tab-button active" data-tab="payments" type="button">Платежи</button>
+    <button class="tab-button" data-tab="platform" type="button">Платформа / TRC‑20</button>
+    <button class="tab-button" data-tab="webhooks" type="button">Webhook <span class="count">@Model.Webhooks.Count</span></button>
+    <button class="tab-button" data-tab="history" type="button">История <span class="count">@Model.History.Count</span></button>
+</div>
+
+<section class="tab-panel active" data-panel="payments">
+    <div class="two-column">
+        <article class="card">
+            <div class="card-kicker">H2H PAY-IN</div><h2>Создать платёж</h2><p class="muted">Создаёт H2H-сессию и возвращает sessionId.</p>
+            <form asp-action="CreateH2h" method="post" class="form-stack">
+                <input type="hidden" name="MerchantId" value="@Model.Merchant.Id" /><input type="hidden" name="IsProd" value="@(Model.IsProd ? "true" : "false")" />
+                <div class="field"><label>Merchant Order ID</label><div class="input-action"><input name="MerchantOrderId" value="@generatedOrderId" required /><button type="button" class="generate-button" data-generate="order-id" data-prefix="H2H" title="Сгенерировать новый ID">↻</button></div></div>
+                <div class="form-grid"><div class="field"><label>Сумма</label><input name="Amount" type="number" min="0.01" step="0.01" value="150.00" required /></div><div class="field"><label>Валюта</label><select name="Currency"><option>UAH</option><option>USD</option><option>EUR</option></select></div></div>
+                <div class="form-grid"><div class="field"><label>Курс</label><input name="ExchangeRate" type="number" min="0.000001" step="0.000001" value="45.17" required /></div><div class="field"><label>Сценарий</label><select name="TestScenario"><option value="0">Success</option><option value="1">Expired</option><option value="2">Failure</option></select></div></div>
+                <label class="check"><input name="UseWebhook" type="checkbox" value="true" checked /> Отправлять callback на этот сайт</label>
+                <button class="btn primary" type="submit">Создать H2H платёж</button>
+            </form>
+        </article>
+
+        <article class="card">
+            <div class="card-kicker">H2H PAY-OUT</div><h2>Создать выплату</h2><p class="muted">Создаёт дебит-сессию на карту получателя.</p>
+            <form asp-action="CreateDebit" method="post" class="form-stack">
+                <input type="hidden" name="MerchantId" value="@Model.Merchant.Id" /><input type="hidden" name="IsProd" value="@(Model.IsProd ? "true" : "false")" />
+                <div class="field"><label>Merchant Order ID</label><div class="input-action"><input name="MerchantOrderId" value="@generatedDebitId" required /><button type="button" class="generate-button" data-generate="order-id" data-prefix="DEBIT" title="Сгенерировать новый ID">↻</button></div></div>
+                <div class="form-grid"><div class="field"><label>Сумма</label><input name="Amount" type="number" min="0.01" step="0.01" value="1000.00" required /></div><div class="field"><label>Валюта</label><select name="Currency"><option>UAH</option><option>USD</option><option>EUR</option></select></div></div>
+                <div class="field"><label>Карта получателя</label><div class="input-action"><input name="CardNumber" inputmode="numeric" autocomplete="off" data-autogenerate="card" required /><button type="button" class="generate-button wide" data-generate="card" title="Сгенерировать валидный тестовый номер карты">Сгенерировать</button></div><div class="hint">Генерируется 16-значный номер с корректной контрольной суммой Luhn.</div></div>
+                <div class="field"><label>Сценарий</label><select name="TestScenario"><option value="-1">Не передавать</option><option value="0">Success</option><option value="1">Expired</option><option value="2">Failure</option></select></div>
+                <label class="check"><input name="UseWebhook" type="checkbox" value="true" checked /> Отправлять callback на этот сайт</label>
+                <button class="btn primary" type="submit">Создать выплату</button>
+            </form>
+        </article>
+    </div>
+
+    <article class="card session-card">
+        <div class="card-kicker">SESSION CONTROL</div><h2>Отмена и диспут</h2>
+        <div class="two-column compact-columns">
+            <form asp-action="Cancel" method="post" class="form-stack">
+                <input type="hidden" name="MerchantId" value="@Model.Merchant.Id" /><input type="hidden" name="IsProd" value="@(Model.IsProd ? "true" : "false")" />
+                <div class="field"><label>Session ID</label><div class="input-action"><input name="SessionId" value="@latestSessionId" placeholder="00000000-0000-0000-0000-000000000000" required /><button type="button" class="generate-button wide" data-fill-latest-session="@latestSessionId" title="Подставить последнюю созданную сессию">Последняя</button></div></div>
+                <button class="btn danger" type="submit">Отменить сессию</button>
+            </form>
+            <form asp-action="Dispute" method="post" enctype="multipart/form-data" class="form-stack">
+                <input type="hidden" name="MerchantId" value="@Model.Merchant.Id" /><input type="hidden" name="IsProd" value="@(Model.IsProd ? "true" : "false")" />
+                <div class="field"><label>Session ID</label><div class="input-action"><input name="SessionId" value="@latestSessionId" placeholder="00000000-0000-0000-0000-000000000000" required /><button type="button" class="generate-button wide" data-fill-latest-session="@latestSessionId" title="Подставить последнюю созданную сессию">Последняя</button></div></div>
+                <div class="field"><label>Фотографии (1–5, до 10 МБ каждая)</label><input id="disputeFiles" name="Files" type="file" accept="image/jpeg,image/png,image/webp" multiple required /><div id="fileCount" class="hint">Выбрано: 0/5</div></div>
+                <button class="btn warning" type="submit">Открыть диспут</button>
+            </form>
+        </div>
+    </article>
+</section>
+
+<section class="tab-panel" data-panel="platform">
+    @if (Model.Platform is null)
+    {
+        <article class="card narrow-card">
+            <div class="card-kicker">TRC-20 TOP-UP</div>
+            <h2>Заявка на пополнение</h2>
+            <form asp-action="CreateTopUpRequest" method="post" class="form-stack">
+                <input type="hidden" name="MerchantId" value="@Model.Merchant.Id" />
+                <input type="hidden" name="IsProd" value="@(Model.IsProd ? "true" : "false")" />
+                <div class="field"><label>Сумма USDT</label><input name="Amount" type="number" min="0.01" step="0.01" value="100" required /></div>
+                <button class="btn primary" type="submit">Создать заявку</button>
+            </form>
+        </article>
+    }
+    else
+    {
+        <div class="platform-summary card">
+            <div><div class="eyebrow">Активная сессия</div><h2>@Model.Platform.Login <span class="badge">@Model.Platform.Role</span></h2><p class="muted">Баланс: <strong>@(Model.Platform.Balance?.ToString("N2") ?? "ошибка") USDT</strong></p></div>
+            <form asp-action="PlatformLogout" method="post"><input type="hidden" name="merchantId" value="@Model.Merchant.Id" /><input type="hidden" name="isProd" value="@(Model.IsProd ? "true" : "false")" /><button class="btn secondary" type="submit">Выйти из платформы</button></form>
+        </div>
+        <div class="two-column">
+            <article class="card"><h2>Вывод USDT TRC‑20</h2><form asp-action="Withdraw" method="post" class="form-stack"><input type="hidden" name="MerchantId" value="@Model.Merchant.Id" /><input type="hidden" name="IsProd" value="@(Model.IsProd ? "true" : "false")" /><div class="field"><label>Сумма USDT</label><input name="Amount" type="number" min="0.01" step="0.01" value="100" required /></div><div class="field"><label>TRON-адрес</label><div class="input-action"><input name="WalletAddress" placeholder="T..." autocomplete="off" required /><button type="button" class="generate-button wide" data-generate="tron-address">Сгенерировать</button></div><div class="hint">Создаётся тестовый адрес TRON с корректным Base58Check.</div></div><button class="btn primary" type="submit">Создать заявку</button></form></article>
+            <article class="card">
+                <div class="card-kicker">TRC-20 TOP-UP</div>
+                <h2>Заявка на пополнение</h2>
+                <form asp-action="CreateTopUpRequest" method="post" class="form-stack">
+                    <input type="hidden" name="MerchantId" value="@Model.Merchant.Id" />
+                    <input type="hidden" name="IsProd" value="@(Model.IsProd ? "true" : "false")" />
+                    <div class="field"><label>Сумма USDT</label><input name="Amount" type="number" min="0.01" step="0.01" value="100" required /></div>
+                    <button class="btn primary" type="submit">Создать заявку</button>
+                </form>
+            </article>
+        </div>
+    }
+    @if (Model.TopUpRequests.Count > 0)
+    {
+        <article class="card topup-list">
+            <div class="card-kicker">TOP-UP REQUESTS</div>
+            <h2>Заявки на пополнение</h2>
+            <div class="record-list">
+                @foreach (var request in Model.TopUpRequests)
+                {
+                    <div class="record topup-record"><code>@request.Id</code><strong>@request.Amount.ToString("N2") USDT</strong><span class="badge">@request.Status</span><span class="muted small">@request.CreatedAt.ToLocalTime().ToString("dd.MM HH:mm") · @request.PlatformLogin</span></div>
+                }
+            </div>
+        </article>
+    }
+</section>
+
+<section class="tab-panel" data-panel="webhooks">
+    <article class="card">
+        <div class="page-heading compact"><div><div class="card-kicker">PUBLIC CALLBACK</div><h2>Webhook endpoint</h2></div><form asp-action="ClearWebhooks" method="post"><input type="hidden" name="merchantId" value="@Model.Merchant.Id" /><input type="hidden" name="isProd" value="@(Model.IsProd ? "true" : "false")" /><button class="btn secondary" type="submit">Очистить</button></form></div>
+        <div class="copy-line"><code id="webhookUrl">@Model.WebhookUrl</code><button class="btn secondary small-btn" type="button" data-copy="#webhookUrl">Копировать</button></div>
+        <div class="record-list">
+            @foreach (var webhook in Model.Webhooks)
+            {
+                <details class="record"><summary><span>@webhook.ReceivedAt.ToLocalTime().ToString("dd.MM HH:mm:ss")</span><span class="badge @(webhook.SignatureValid == false ? "bad" : "")">подпись: @(webhook.SignatureValid?.ToString() ?? "нет")</span></summary><pre>@webhook.Body</pre></details>
+            }
+            @if (Model.Webhooks.Count == 0) { <p class="muted">Webhook-и ещё не получены.</p> }
+        </div>
+    </article>
+</section>
+
+<section class="tab-panel" data-panel="history">
+    <article class="card">
+        <div class="page-heading compact"><div><div class="card-kicker">AUDIT</div><h2>История операций</h2></div><form asp-action="ClearHistory" method="post"><input type="hidden" name="merchantId" value="@Model.Merchant.Id" /><input type="hidden" name="isProd" value="@(Model.IsProd ? "true" : "false")" /><button class="btn secondary" type="submit">Очистить</button></form></div>
+        <div class="table-wrap"><table><thead><tr><th>Время</th><th>Тип</th><th>Order / Session</th><th>Сумма</th><th>Статус</th></tr></thead><tbody>
+        @foreach (var item in Model.History)
+        {
+            <tr><td>@item.CreatedAt.ToLocalTime().ToString("dd.MM HH:mm:ss")</td><td>@item.Type</td><td><div>@item.MerchantOrderId</div><code>@item.SessionId</code></td><td>@(item.Amount > 0 ? $"{item.Amount:N2} {item.Currency}" : "—")</td><td><span class="badge">@item.Status</span></td></tr>
+        }
+        @if (Model.History.Count == 0) { <tr><td colspan="5" class="muted">История пуста.</td></tr> }
+        </tbody></table></div>
+    </article>
+</section>

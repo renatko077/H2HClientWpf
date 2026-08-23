@@ -1,0 +1,8 @@
+bin/
+obj/
+.vs/
+App_Data/*.db
+App_Data/*.db-shm
+App_Data/*.db-wal
+App_Data/keys/
+publish/
