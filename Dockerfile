@@ -10,7 +10,4 @@ ENV ASPNETCORE_URLS=http://+:8080
 ENV ASPNETCORE_ENVIRONMENT=Production
 EXPOSE 8080
 COPY --from=build /app/publish .
-RUN mkdir -p /app/App_Data /app/App_Data/keys \
-    && chown -R 1654:1654 /app
-USER 1654
 ENTRYPOINT ["dotnet", "H2HClientWpf.dll"]
