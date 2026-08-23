@@ -188,9 +188,8 @@ public sealed class PaymentApiClient
         Merchant merchant, bool isProd, HttpMethod method, string path, object body,
         bool includeIdempotency = false, bool parseSessionId = false)
     {
-        // Orders must be created in both environments. KalachPay intentionally does not
-        // create an Order when X-Api-Key is the merchant TestApiKey.
-        var apiKey = merchant.LiveApiKey.Trim();
+        // DEV uses the merchant test key; PROD uses the live key.
+        var apiKey = (isProd ? merchant.LiveApiKey : merchant.TestApiKey).Trim();
         if (string.IsNullOrWhiteSpace(apiKey))
             return Failed("У мерчанта не задан API key для создания заявок.");
         if (string.IsNullOrWhiteSpace(merchant.Secret)) return Failed("У мерчанта не задан Secret Key.");
