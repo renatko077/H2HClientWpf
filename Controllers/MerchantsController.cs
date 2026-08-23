@@ -286,6 +286,15 @@ public sealed class MerchantsController : Controller
     }
 
     [HttpPost]
+    public IActionResult DeletePlatformCredential(bool isProd, string login)
+    {
+        if (!string.IsNullOrWhiteSpace(login))
+            _repository.DeletePlatformCredential(isProd, login);
+        SetEnvironment(isProd);
+        return RedirectToAction(nameof(Index), new { prod = isProd });
+    }
+
+    [HttpPost]
     public async Task<IActionResult> PlatformLogout(int? merchantId, bool isProd)
     {
         var session = GetPlatformSession(isProd);

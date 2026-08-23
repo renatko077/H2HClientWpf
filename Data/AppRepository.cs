@@ -273,6 +273,18 @@ public sealed class AppRepository
         command.ExecuteNonQuery();
     }
 
+    public void DeletePlatformCredential(bool isProd, string login)
+    {
+        var credential = GetPlatformCredentials(isProd)
+            .FirstOrDefault(item => string.Equals(item.Login, login.Trim(), StringComparison.OrdinalIgnoreCase));
+        if (credential is null) return;
+        using var connection = OpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = "DELETE FROM PlatformCredentials WHERE Id=$id;";
+        command.Parameters.AddWithValue("$id", credential.Id);
+        command.ExecuteNonQuery();
+    }
+
     private PlatformCredential ReadPlatformCredential(SqliteDataReader reader) => new()
     {
         Id = reader.GetInt64(0),

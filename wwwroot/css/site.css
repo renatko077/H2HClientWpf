@@ -47,6 +47,7 @@ pre { max-height: 28rem; margin: .75rem 0 0; padding: 1rem; overflow: auto; bord
 .modal-error { padding: .65rem .75rem; border: 1px solid #68323a; border-radius: .65rem; color: #ffadb4; background: rgba(43,21,26,.8); font-size: .74rem; }
 .saved-accounts { display: flex; flex-wrap: wrap; gap: .4rem; }
 .saved-accounts button { display: inline-flex; align-items: center; gap: .4rem; padding: .38rem .55rem; border: 1px solid var(--border); border-radius: .6rem; color: #cad6e9; background: rgba(255,255,255,.035); font-size: .7rem; cursor: pointer; }
+.saved-accounts .saved-account-remove { margin-left: -.25rem; padding: .2rem .4rem; color: #ffadb4; border-color: rgba(255,110,125,.28); }
 .saved-accounts button:hover { border-color: #42639b; background: rgba(76,141,255,.1); }
 .saved-accounts button span { display: grid; width: 1.25rem; height: 1.25rem; border-radius: .38rem; color: #dce9ff; background: #1a315c; font-size: .58rem; font-weight: 900; place-items: center; }
 .header-menu-panel { position: absolute; z-index: 70; top: calc(100% + .65rem); right: 0; display: grid; width: 220px; padding: .5rem; border: 1px solid var(--border); border-radius: .8rem; background: #111722; box-shadow: var(--shadow); }

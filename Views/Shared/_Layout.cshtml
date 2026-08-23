@@ -67,7 +67,8 @@
                                     <div class="saved-accounts">
                                         @foreach (var account in savedPlatforms)
                                         {
-                                            <button type="button" data-account-login="@account.Login"><span>@account.Login[..1].ToUpperInvariant()</span>@account.Login</button>
+                                            <button type="button" data-account-login="@account.Login"><span>@account.Login[..1].ToUpperInvariant()</span><b>@account.Login</b></button>
+                                            <button type="submit" class="saved-account-remove" formaction="@Url.Action("DeletePlatformCredential", "Merchants")" name="login" value="@account.Login" title="Удалить сохранённый вход" aria-label="Удалить @account.Login">×</button>
                                         }
                                     </div>
                                 }
