@@ -105,9 +105,6 @@ app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
-    .AllowAnonymous();
-
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Merchants}/{action=Index}/{id?}");
