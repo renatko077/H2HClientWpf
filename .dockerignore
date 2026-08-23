@@ -3,5 +3,7 @@ obj/
 .vs/
 .git/
 App_Data/
+publish-container-check/
+publish/
 *.user
 *.suo
