@@ -188,8 +188,9 @@ public sealed class PaymentApiClient
         Merchant merchant, bool isProd, HttpMethod method, string path, object body,
         bool includeIdempotency = false, bool parseSessionId = false)
     {
-        // DEV uses the merchant test key; PROD uses the live key.
-        var apiKey = (isProd ? merchant.LiveApiKey : merchant.TestApiKey).Trim();
+        // H2H orders use the merchant API key in both environments.
+        // TestApiKey is reserved for the separate /test endpoints.
+        var apiKey = merchant.LiveApiKey.Trim();
         if (string.IsNullOrWhiteSpace(apiKey))
             return Failed("У мерчанта не задан API key для создания заявок.");
         if (string.IsNullOrWhiteSpace(merchant.Secret)) return Failed("У мерчанта не задан Secret Key.");
