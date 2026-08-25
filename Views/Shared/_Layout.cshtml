@@ -1,9 +1,11 @@
 ﻿<!DOCTYPE html>
 @using H2HClientWeb.Data
 @using H2HClientWeb.Services
+@using Microsoft.AspNetCore.Hosting
 @inject AppRepository Repository
+@inject IWebHostEnvironment HostEnvironment
 @{
-    var currentProd = Context.Session.GetString("Environment:IsProd") == "true";
+    var currentProd = !HostEnvironment.IsDevelopment();
     var platformKey = currentProd ? "Platform:Prod" : "Platform:Dev";
     var platformSession = Context.Session.GetJson<PlatformSession>(platformKey);
     var savedPlatforms = Repository.GetPlatformCredentials(currentProd);
@@ -30,10 +32,7 @@
                 <span class="brand-copy"><strong>ApexPay</strong><small>H2H Console</small></span>
             </a>
                 <nav class="topnav header-controls">
-                    <div class="mode-switch header-mode">
-                        <a class="@(!currentProd ? "active" : "")" asp-controller="Merchants" asp-action="Index" asp-route-prod="false"><span class="status-dot"></span>DEV</a>
-                        <a class="@(currentProd ? "active prod" : "")" asp-controller="Merchants" asp-action="Index" asp-route-prod="true"><span class="status-dot"></span>PROD</a>
-                    </div>
+                    <span class="environment-lock"><span class="status-dot"></span>@(currentProd ? "PROD" : "DEV")</span>
                     @if (platformSession is not null)
                     {
                         <details class="account-menu header-menu">

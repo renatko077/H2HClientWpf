@@ -3,6 +3,7 @@ using H2HClientWeb.Data;
 using H2HClientWeb.Models;
 using H2HClientWeb.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Data.Sqlite;
 
 namespace H2HClientWeb.Controllers;
@@ -14,18 +15,21 @@ public sealed class MerchantsController : Controller
     private readonly AppRepository _repository;
     private readonly PaymentApiClient _api;
     private readonly IConfiguration _configuration;
+    private readonly IWebHostEnvironment _environment;
 
     public MerchantsController(
-        AppRepository repository, PaymentApiClient api, IConfiguration configuration)
+        AppRepository repository, PaymentApiClient api, IConfiguration configuration, IWebHostEnvironment environment)
     {
         _repository = repository;
         _api = api;
         _configuration = configuration;
+        _environment = environment;
     }
 
     [HttpGet]
     public IActionResult Index(bool prod = false, string? platformError = null)
     {
+        prod = HostedProduction;
         SetEnvironment(prod);
         ViewBag.PlatformError = platformError;
         return View(_repository.GetMerchants(prod));
@@ -34,6 +38,7 @@ public sealed class MerchantsController : Controller
     [HttpGet]
     public IActionResult Edit(int? id, bool prod = false)
     {
+        prod = HostedProduction;
         if (id is null)
             return View(new Merchant
             {
@@ -52,6 +57,7 @@ public sealed class MerchantsController : Controller
     [HttpPost]
     public IActionResult Edit(Merchant merchant)
     {
+        merchant.IsProd = HostedProduction;
         if (merchant.Id == 0)
         {
             if (string.IsNullOrWhiteSpace(merchant.LiveApiKey)) ModelState.AddModelError(nameof(merchant.LiveApiKey), "Укажите API key.");
@@ -87,6 +93,8 @@ public sealed class MerchantsController : Controller
         var merchant = _repository.GetMerchant(id);
         if (merchant is null) return NotFound();
         prod = merchant.IsProd;
+        if (prod != HostedProduction)
+            return RedirectToAction(nameof(Index), new { prod = HostedProduction });
         SetEnvironment(prod);
 
         var platform = GetPlatformSession(prod);
@@ -425,6 +433,8 @@ public sealed class MerchantsController : Controller
         : _configuration["Platform:DevelopmentBaseUrl"] ?? "https://localhost:7150";
 
     private void SetEnvironment(bool isProd) => HttpContext.Session.SetString(EnvironmentKey, isProd ? "true" : "false");
+
+    private bool HostedProduction => !_environment.IsDevelopment();
     private static string PlatformKey(bool isProd) => isProd ? "Platform:Prod" : "Platform:Dev";
     private PlatformSession? GetPlatformSession(bool isProd) => HttpContext.Session.GetJson<PlatformSession>(PlatformKey(isProd));
 }
